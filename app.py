@@ -1,89 +1,44 @@
 from flask import Flask, render_template, request, redirect, url_for
 import os
-import requests
-from requests.auth import HTTPBasicAuth
-import base64
-import subprocess
-import sys
-
-# Funktion zum Installieren der Abhängigkeiten aus requirements.txt
-def install_requirements():
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
-        print("Pakete erfolgreich installiert.")
-    except subprocess.CalledProcessError as e:
-        print(f"Fehler beim Installieren der Pakete: {e}")
-
-# Installiere Abhängigkeiten
-install_requirements()
 
 app = Flask(__name__)
 
-# Verzeichnis für temporäre Videos auf der Render-Seite
+# Verzeichnis für temporäre Videos
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Erlaubte Video-Dateitypen
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 
-# GitHub API Details
-GITHUB_API_URL = "https://api.github.com/NovaDevelopmentTeam/video_face_swapper/contents/"
-ACCESS_TOKEN = 'DEIN_PERSONAL_ACCESS_TOKEN'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def allowed_file(filename):
+    """Überprüft, ob die Datei einen erlaubten Typ hat."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def index():
-    # Anzeige der aktuellen Videos auf Render
+    """Startseite."""
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    """Datei-Upload-Logik."""
     if 'file' not in request.files:
-        return redirect(request.url)
-    
+        return "No file part", 400
+
     file = request.files['file']
-    
+
+    if file.filename == '':
+        return "No selected file", 400
+
     if file and allowed_file(file.filename):
         filename = file.filename
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
-
-        # Video an GitHub senden
-        upload_video_to_github(filename, file_path)
-
-        return redirect(url_for('index'))
+        return f"File {filename} uploaded successfully!"
     else:
         return "File type not allowed", 400
-
-def upload_video_to_github(filename, video_file_path):
-    """
-    Lädt ein Video von der Render-Seite auf GitHub hoch.
-    """
-    with open(video_file_path, 'rb') as file:
-        video_data = file.read()
-
-    # Base64 Kodierung des Videos
-    video_base64 = base64.b64encode(video_data).decode('utf-8')
-
-    # GitHub API Request zum Hochladen
-    file_path = 'videos/' + filename  # Zielordner auf GitHub
-    message = f"Add {filename} video"
-
-    response = requests.put(
-        GITHUB_API_URL + file_path,
-        auth=HTTPBasicAuth('DEIN_USERNAME', ACCESS_TOKEN),
-        json={
-            "message": message,
-            "content": video_base64
-        }
-    )
-
-    if response.status_code == 201:
-        print(f"Video {filename} erfolgreich auf GitHub hochgeladen.")
-    else:
-        print(f"Fehler beim Hochladen des Videos: {response.status_code}, {response.text}")
 
 if __name__ == '__main__':
     app.run(debug=True)
