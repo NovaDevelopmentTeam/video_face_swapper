@@ -27,7 +27,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 
 # GitHub API Details
-GITHUB_API_URL = "https://api.github.com/repos/DEIN_USERNAME/DEIN_REPOSITORY/contents/"
+GITHUB_API_URL = "https://api.github.com/NovaDevelopmentTeam/video_face_swapper/contents/"
 ACCESS_TOKEN = 'DEIN_PERSONAL_ACCESS_TOKEN'
 
 def allowed_file(filename):
