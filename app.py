@@ -3,6 +3,19 @@ import os
 import requests
 from requests.auth import HTTPBasicAuth
 import base64
+import subprocess
+import sys
+
+# Funktion zum Installieren der Abhängigkeiten aus requirements.txt
+def install_requirements():
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+        print("Pakete erfolgreich installiert.")
+    except subprocess.CalledProcessError as e:
+        print(f"Fehler beim Installieren der Pakete: {e}")
+
+# Installiere Abhängigkeiten
+install_requirements()
 
 app = Flask(__name__)
 
