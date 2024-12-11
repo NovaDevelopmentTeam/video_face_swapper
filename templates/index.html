@@ -3,62 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Swap Video Upload</title>
+    <title>Video Face Swap</title>
     <style>
+        .preview-container {
+            display: flex;
+            gap: 20px;
+        }
         .preview {
-            margin-top: 15px;
-        }
-        img {
-            max-width: 200px;
-            max-height: 200px;
-        }
-        video {
             max-width: 300px;
             max-height: 300px;
         }
     </style>
 </head>
 <body>
-    <h1>Upload a Video and a Face Image</h1>
+    <h1>Video Face Swap</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
-        <label for="video">Select a Video:</label><br>
-        <input type="file" id="video" name="video" accept="video/*" required onchange="previewVideo(event)"><br><br>
-        
-        <div class="preview">
-            <video id="videoPreview" controls style="display: none;"></video>
-        </div>
+        <label for="image">Select Image:</label>
+        <input type="file" id="image" name="image" accept="image/*" onchange="previewImage(event)">
+        <div id="image-preview" class="preview-container"></div>
 
-        <label for="image">Select a Face Image:</label><br>
-        <input type="file" id="image" name="image" accept="image/*" required onchange="previewImage(event)"><br><br>
-        
-        <div class="preview">
-            <img id="imagePreview" style="display: none;">
-        </div>
+        <label for="video">Select Video:</label>
+        <input type="file" id="video" name="video" accept="video/*" onchange="previewVideo(event)">
+        <div id="video-preview" class="preview-container"></div>
 
         <button type="submit">Upload</button>
     </form>
 
     <script>
         function previewImage(event) {
-            const imageInput = event.target;
-            const imagePreview = document.getElementById('imagePreview');
-            if (imageInput.files && imageInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    imagePreview.src = e.target.result;
-                    imagePreview.style.display = 'block';
-                };
-                reader.readAsDataURL(imageInput.files[0]);
+            const imagePreview = document.getElementById('image-preview');
+            imagePreview.innerHTML = ''; // Alte Vorschau löschen
+            const file = event.target.files[0];
+            if (file) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.classList.add('preview');
+                imagePreview.appendChild(img);
             }
         }
 
         function previewVideo(event) {
-            const videoInput = event.target;
-            const videoPreview = document.getElementById('videoPreview');
-            if (videoInput.files && videoInput.files[0]) {
-                const videoURL = URL.createObjectURL(videoInput.files[0]);
-                videoPreview.src = videoURL;
-                videoPreview.style.display = 'block';
+            const videoPreview = document.getElementById('video-preview');
+            videoPreview.innerHTML = ''; // Alte Vorschau löschen
+            const file = event.target.files[0];
+            if (file) {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(file);
+                video.classList.add('preview');
+                video.controls = true;
+                videoPreview.appendChild(video);
             }
         }
     </script>
