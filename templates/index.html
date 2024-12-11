@@ -4,17 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Swap Video Upload</title>
+    <style>
+        .preview {
+            margin-top: 15px;
+        }
+        img {
+            max-width: 200px;
+            max-height: 200px;
+        }
+        video {
+            max-width: 300px;
+            max-height: 300px;
+        }
+    </style>
 </head>
 <body>
     <h1>Upload a Video and a Face Image</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
         <label for="video">Select a Video:</label><br>
-        <input type="file" id="video" name="video" accept="video/*" required><br><br>
+        <input type="file" id="video" name="video" accept="video/*" required onchange="previewVideo(event)"><br><br>
         
+        <div class="preview">
+            <video id="videoPreview" controls style="display: none;"></video>
+        </div>
+
         <label for="image">Select a Face Image:</label><br>
-        <input type="file" id="image" name="image" accept="image/*" required><br><br>
+        <input type="file" id="image" name="image" accept="image/*" required onchange="previewImage(event)"><br><br>
         
+        <div class="preview">
+            <img id="imagePreview" style="display: none;">
+        </div>
+
         <button type="submit">Upload</button>
     </form>
+
+    <script>
+        function previewImage(event) {
+            const imageInput = event.target;
+            const imagePreview = document.getElementById('imagePreview');
+            if (imageInput.files && imageInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(imageInput.files[0]);
+            }
+        }
+
+        function previewVideo(event) {
+            const videoInput = event.target;
+            const videoPreview = document.getElementById('videoPreview');
+            if (videoInput.files && videoInput.files[0]) {
+                const videoURL = URL.createObjectURL(videoInput.files[0]);
+                videoPreview.src = videoURL;
+                videoPreview.style.display = 'block';
+            }
+        }
+    </script>
 </body>
 </html>
