@@ -41,4 +41,5 @@ def upload_file():
         return "File type not allowed", 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Port aus Umgebungsvariablen holen oder Standard-Port 5000 verwenden
+    app.run(host='0.0.0.0', port=port, debug=True)
