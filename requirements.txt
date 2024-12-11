@@ -1,5 +1,5 @@
 flask
 requests
-cv2
+opencv-python
 dlib
 numpy
