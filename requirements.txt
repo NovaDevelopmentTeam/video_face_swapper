@@ -1,5 +1,5 @@
 flask
 requests
 opencv-python
-dlib
+dlib-bin
 numpy
