@@ -32,35 +32,24 @@ def allowed_file(filename, allowed_extensions):
 
 def extract_face(image_path):
     """
-    Extrahiert ein Gesicht aus dem Bild und visualisiert die Landmark-Punkte.
+    Extrahiert ein Gesicht aus dem Bild.
     """
     image = cv2.imread(image_path)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     faces = face_detector(gray)
 
     if len(faces) == 0:
-        cv2.imshow("Debug Image", gray)  # Zeige das Bild zur Fehlersuche
-        cv2.waitKey(0)
         raise ValueError("Kein Gesicht im Bild gefunden.")
 
     # Wähle das erste erkannte Gesicht
     face = faces[0]
     landmarks = face_predictor(gray, face)
     points = np.array([[p.x, p.y] for p in landmarks.parts()])
-
-    # Debug: Visualisiere die Landmark-Punkte
-    for (x, y) in points:
-        cv2.circle(image, (x, y), 2, (0, 255, 0), -1)  # Zeichne grüne Punkte
-
-    cv2.imshow("Landmark Points - Image", image)  # Zeige die Landmark-Punkte
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
     return image, points
 
 def perform_face_swap(video_path, image_path, output_path):
     """
-    Führt den Gesichts-Austausch durch und visualisiert die Landmark-Punkte im Video.
+    Führt den Gesichts-Austausch durch.
     """
     # Gesicht aus dem Bild extrahieren
     face_image, face_points = extract_face(image_path)
@@ -83,15 +72,6 @@ def perform_face_swap(video_path, image_path, output_path):
             landmarks = face_predictor(gray_frame, face)
             points = np.array([[p.x, p.y] for p in landmarks.parts()])
 
-            # Debug: Visualisiere die Landmark-Punkte im Video
-            for (x, y) in points:
-                cv2.circle(frame, (x, y), 2, (255, 0, 0), -1)  # Zeichne blaue Punkte
-
-            # Zeige den Frame mit Landmark-Punkten (debugging)
-            cv2.imshow("Landmark Points - Video", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):  # Drücke 'q', um das Debuggen zu beenden
-                break
-
             # Transformiere das Gesicht ins Video
             convexhull = cv2.convexHull(points)
             face_mask = np.zeros_like(gray_frame)
@@ -107,7 +87,6 @@ def perform_face_swap(video_path, image_path, output_path):
 
     cap.release()
     out.release()
-    cv2.destroyAllWindows()
 
 @app.route('/')
 def index():
