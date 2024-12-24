@@ -47,25 +47,43 @@ def extract_face(image_path):
     points = np.array([[p.x, p.y] for p in landmarks.parts()])
     return image, points
 
+def scale_face_to_target(src_face, src_points, dest_points):
+    """
+    Skaliert das Quellgesicht so, dass es zur Zielgröße passt.
+    """
+    # Berechne den Augenabstand im Quell- und Zielgesicht
+    src_eye_distance = np.linalg.norm(src_points[36] - src_points[45])  # Indizes für die Augenwinkel
+    dest_eye_distance = np.linalg.norm(dest_points[36] - dest_points[45])
+
+    # Berechne den Skalierungsfaktor
+    scale_factor = dest_eye_distance / src_eye_distance
+
+    # Skaliere das Quellgesicht
+    new_size = (int(src_face.shape[1] * scale_factor), int(src_face.shape[0] * scale_factor))
+    scaled_face = cv2.resize(src_face, new_size, interpolation=cv2.INTER_CUBIC)
+
+    # Skaliere die Punkte entsprechend
+    scaled_points = src_points * scale_factor
+    return scaled_face, scaled_points
+
 def warp_face(src_face, src_points, dest_points, dest_shape):
     """
     Passt das Gesicht vom Quellbild an das Zielgesicht an.
     """
-    matrix = cv2.getAffineTransform(
-        np.float32(src_points[:3]),  # Nur die ersten drei Punkte für die Transformation
-        np.float32(dest_points[:3])
-    )
-    warped_face = cv2.warpAffine(src_face, matrix, (dest_shape[1], dest_shape[0]))
+    hull_index = cv2.convexHull(dest_points, returnPoints=False)
+    src_hull = np.array([src_points[idx[0]] for idx in hull_index], dtype=np.float32)
+    dest_hull = np.array([dest_points[idx[0]] for idx in hull_index], dtype=np.float32)
+
+    matrix = cv2.getAffineTransform(src_hull[:3], dest_hull[:3])
+    warped_face = cv2.warpAffine(src_face, matrix, (dest_shape[1], dest_shape[0]), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT_101)
     return warped_face
 
 def perform_face_swap(video_path, image_path, output_path):
     """
-    Führt den Gesichts-Austausch durch.
+    Führt den Gesichts-Austausch durch, inklusive automatischer Skalierung.
     """
-    # Gesicht aus dem Bild extrahieren
     face_image, face_points = extract_face(image_path)
 
-    # Öffne das Video
     cap = cv2.VideoCapture(video_path)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, int(cap.get(cv2.CAP_PROP_FPS)),
@@ -83,13 +101,18 @@ def perform_face_swap(video_path, image_path, output_path):
             landmarks = face_predictor(gray_frame, face)
             points = np.array([[p.x, p.y] for p in landmarks.parts()])
 
-            # Transformiere das Gesicht ins Video
-            warped_face = warp_face(face_image, face_points, points, frame.shape)
-            
+            # Skaliere das Quellgesicht
+            scaled_face, scaled_face_points = scale_face_to_target(face_image, face_points, points)
+
+            # Warpe das skalierte Gesicht
+            warped_face = warp_face(scaled_face, scaled_face_points, points, frame.shape)
+
+            # Erstelle die Gesichtsmaske
             convexhull = cv2.convexHull(points)
             face_mask = np.zeros_like(gray_frame)
             cv2.fillConvexPoly(face_mask, convexhull, 255)
 
+            # Klone das Gesicht in das Zielbild
             center = tuple(np.mean(points, axis=0).astype(int))
             frame = cv2.seamlessClone(warped_face, frame, face_mask, center, cv2.NORMAL_CLONE)
 
