@@ -29,10 +29,17 @@
         <button type="submit">Upload</button>
     </form>
 
+    <h2>Upload Model</h2>
+    <form action="/upload_model" method="post" enctype="multipart/form-data">
+        <label for="model">Select Model File:</label>
+        <input type="file" id="model" name="model" accept=".h5">
+        <button type="submit">Upload Model</button>
+    </form>
+
     <script>
         function previewImage(event) {
             const imagePreview = document.getElementById('image-preview');
-            imagePreview.innerHTML = ''; // Alte Vorschau löschen
+            imagePreview.innerHTML = ''; // Clear previous preview
             const file = event.target.files[0];
             if (file) {
                 const img = document.createElement('img');
@@ -44,7 +51,7 @@
 
         function previewVideo(event) {
             const videoPreview = document.getElementById('video-preview');
-            videoPreview.innerHTML = ''; // Alte Vorschau löschen
+            videoPreview.innerHTML = ''; // Clear previous preview
             const file = event.target.files[0];
             if (file) {
                 const video = document.createElement('video');
