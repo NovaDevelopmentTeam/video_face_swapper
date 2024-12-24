@@ -5,13 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Face Swap</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
         .preview-container {
             display: flex;
             gap: 20px;
+            margin-bottom: 20px;
         }
         .preview {
             max-width: 300px;
             max-height: 300px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .message {
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .message.success {
+            color: green;
+        }
+        .message.error {
+            color: red;
         }
     </style>
 </head>
@@ -19,22 +48,17 @@
     <h1>Video Face Swap</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
         <label for="image">Select Image:</label>
-        <input type="file" id="image" name="image" accept="image/*" onchange="previewImage(event)">
+        <input type="file" id="image" name="image" accept="image/*" onchange="previewImage(event)" required>
         <div id="image-preview" class="preview-container"></div>
 
         <label for="video">Select Video:</label>
-        <input type="file" id="video" name="video" accept="video/*" onchange="previewVideo(event)">
+        <input type="file" id="video" name="video" accept="video/*" onchange="previewVideo(event)" required>
         <div id="video-preview" class="preview-container"></div>
 
-        <button type="submit">Upload</button>
+        <button type="submit">Start Face Swap</button>
     </form>
 
-    <h2>Upload Model</h2>
-    <form action="/upload_model" method="post" enctype="multipart/form-data">
-        <label for="model">Select Model File:</label>
-        <input type="file" id="model" name="model" accept=".h5">
-        <button type="submit">Upload Model</button>
-    </form>
+    <div id="message" class="message"></div>
 
     <script>
         function previewImage(event) {
@@ -60,6 +84,13 @@
                 video.controls = true;
                 videoPreview.appendChild(video);
             }
+        }
+
+        // Optional: Dynamically display success or error messages
+        function displayMessage(type, text) {
+            const message = document.getElementById('message');
+            message.className = `message ${type}`;
+            message.textContent = text;
         }
     </script>
 </body>
