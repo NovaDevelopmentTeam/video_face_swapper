@@ -47,6 +47,17 @@ def extract_face(image_path):
     points = np.array([[p.x, p.y] for p in landmarks.parts()])
     return image, points
 
+def warp_face(src_face, src_points, dest_points, dest_shape):
+    """
+    Passt das Gesicht vom Quellbild an das Zielgesicht an.
+    """
+    matrix = cv2.getAffineTransform(
+        np.float32(src_points[:3]),  # Nur die ersten drei Punkte für die Transformation
+        np.float32(dest_points[:3])
+    )
+    warped_face = cv2.warpAffine(src_face, matrix, (dest_shape[1], dest_shape[0]))
+    return warped_face
+
 def perform_face_swap(video_path, image_path, output_path):
     """
     Führt den Gesichts-Austausch durch.
@@ -73,15 +84,14 @@ def perform_face_swap(video_path, image_path, output_path):
             points = np.array([[p.x, p.y] for p in landmarks.parts()])
 
             # Transformiere das Gesicht ins Video
+            warped_face = warp_face(face_image, face_points, points, frame.shape)
+            
             convexhull = cv2.convexHull(points)
             face_mask = np.zeros_like(gray_frame)
             cv2.fillConvexPoly(face_mask, convexhull, 255)
 
-            # Kopiere das Gesicht auf die Maske
-            face_image_transformed = cv2.seamlessClone(
-                face_image, frame, face_mask, tuple(np.mean(points, axis=0).astype(int)), cv2.NORMAL_CLONE
-            )
-            frame = face_image_transformed
+            center = tuple(np.mean(points, axis=0).astype(int))
+            frame = cv2.seamlessClone(warped_face, frame, face_mask, center, cv2.NORMAL_CLONE)
 
         out.write(frame)
 
