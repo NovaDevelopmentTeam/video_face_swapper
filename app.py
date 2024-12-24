@@ -1,47 +1,40 @@
 import os
 import cv2
 import numpy as np
-import tensorflow as tf
 from flask import Flask, request, send_file, redirect, render_template
+import mediapipe as mp
 
 # Flask setup
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads/'
 OUTPUT_FOLDER = 'outputs/'
-MODEL_FOLDER = 'models/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-os.makedirs(MODEL_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
-app.config['MODEL_FOLDER'] = MODEL_FOLDER
 
-MODEL_PATH = os.path.join(MODEL_FOLDER, 'faceswap_model.h5')
-
-# Funktion, um das Modell zu laden
-def load_model():
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError("Das vortrainierte Modell fehlt. Bitte laden Sie es zuerst hoch.")
-    return tf.keras.models.load_model(MODEL_PATH, compile=False)
+# Mediapipe initialisieren
+mp_face_mesh = mp.solutions.face_mesh
+mp_drawing = mp.solutions.drawing_utils
 
 # Funktion, um Gesichts-Landmarken zu extrahieren
 def extract_face_landmarks(image_path):
-    import dlib
-    detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+    face_mesh = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.5)
 
     image = cv2.imread(image_path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    faces = detector(gray)
+    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    if not faces:
+    # Mediapipe Gesichtserkennung und Landmarkenerkennung
+    results = face_mesh.process(rgb_image)
+
+    if not results.multi_face_landmarks:
         raise ValueError("Kein Gesicht im Bild gefunden.")
 
-    face = faces[0]
-    landmarks = predictor(gray, face)
-    points = np.array([[p.x, p.y] for p in landmarks.parts()])
-    return image, points
+    face_landmarks = results.multi_face_landmarks[0]
+    landmarks = [(int(lm.x * image.shape[1]), int(lm.y * image.shape[0])) for lm in face_landmarks.landmark]
+
+    return image, np.array(landmarks)
 
 # Funktion, um den Gesichtsaustausch durchzuführen
 def apply_faceswap(video_path, image_path, output_path):
@@ -51,27 +44,27 @@ def apply_faceswap(video_path, image_path, output_path):
     out = cv2.VideoWriter(output_path, fourcc, int(cap.get(cv2.CAP_PROP_FPS)),
                           (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
-    model = load_model()
+    face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5)
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
-        detector = dlib.get_frontal_face_detector()
-        predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = detector(gray_frame)
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = face_mesh.process(rgb_frame)
 
-        if faces:
-            target_face = faces[0]
-            target_landmarks = predictor(gray_frame, target_face)
-            target_points = np.array([[p.x, p.y] for p in target_landmarks.parts()])
+        if results.multi_face_landmarks:
+            target_landmarks = results.multi_face_landmarks[0]
+            target_points = np.array([
+                (int(lm.x * frame.shape[1]), int(lm.y * frame.shape[0]))
+                for lm in target_landmarks.landmark
+            ])
 
             matrix, _ = cv2.findHomography(source_landmarks, target_points)
             warped_face = cv2.warpPerspective(source_image, matrix, (frame.shape[1], frame.shape[0]))
 
-            mask = np.zeros_like(gray_frame)
+            mask = np.zeros(frame.shape[:2], dtype=np.uint8)
             cv2.fillConvexPoly(mask, cv2.convexHull(target_points), 255)
 
             frame = cv2.seamlessClone(warped_face, frame, mask, tuple(np.mean(target_points, axis=0).astype(int)),
@@ -107,20 +100,6 @@ def upload():
     apply_faceswap(video_path, image_path, output_path)
 
     return redirect(f"/download/{os.path.basename(output_path)}")
-
-@app.route('/upload_model', methods=['POST'])
-def upload_model():
-    if 'model' not in request.files:
-        return "Bitte laden Sie ein Modell hoch.", 400
-
-    model_file = request.files['model']
-    model_path = os.path.join(MODEL_FOLDER, model_file.filename)
-    model_file.save(model_path)
-
-    if os.path.exists(model_path):
-        os.rename(model_path, MODEL_PATH)
-        return "Modell erfolgreich hochgeladen.", 200
-    return "Fehler beim Hochladen des Modells.", 500
 
 @app.route('/download/<filename>')
 def download(filename):
